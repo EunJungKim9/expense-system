@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>경비 청구 시스템</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --navy: #1a2332;
+  --navy2: #243044;
+  --cream: #f7f4ef;
+  --cream2: #efe9df;
+  --accent: #c8a96e;
+  --accent2: #b8965a;
+  --text: #1a2332;
+  --text2: #5a6478;
+  --text3: #9aa0ad;
+  --border: #e2dcd4;
+  --border2: #d4cdc4;
+  --white: #ffffff;
+  --success-bg: #edf7f0;
+  --success: #1a7a3e;
+  --danger-bg: #fdf0f0;
+  --danger: #c0392b;
+  --r: 10px;
+  --r2: 14px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Noto Sans KR', -apple-system, sans-serif;
+  background: var(--cream);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* ── 헤더 ── */
+.header {
+  background: var(--navy);
+  padding: 0 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.header-left { display: flex; align-items: center; gap: 14px; }
+.header-logo {
+  width: 36px; height: 36px;
+  background: var(--accent);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+}
+.header-title { font-size: 16px; font-weight: 700; color: #fff; letter-spacing: -0.3px; }
+.header-sub { font-size: 12px; color: rgba(255,255,255,0.45); margin-top: 2px; }
+
+/* ── 탭 ── */
+.tab-bar {
+  background: var(--navy2);
+  display: flex;
+  padding: 0 32px;
+  gap: 4px;
+}
+.tab {
+  padding: 13px 22px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  color: rgba(255,255,255,0.45);
+  border-bottom: 2px solid transparent;
+  transition: all .2s;
+  letter-spacing: -0.2px;
+}
+.tab:hover { color: rgba(255,255,255,0.75); }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* ── 레이아웃 ── */
+.container { max-width: 860px; margin: 36px auto; padding: 0 24px 60px; }
+.page { display: none; }
+.page.active { display: block; }
+
+/* ── 섹션 타이틀 ── */
+.section-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text3);
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  margin-top: 28px;
+}
+.section-label:first-child { margin-top: 0; }
+
+/* ── 카드 ── */
+.card {
+  background: var(--white);
+  border-radius: var(--r2);
+  border: 1px solid var(--border);
+  padding: 24px 28px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 3px rgba(26,35,50,0.06);
+}
+
+/* ── 폼 ── */
+label { font-size: 12px; font-weight: 600; color: var(--text2); display: block; margin-bottom: 6px; letter-spacing: 0.2px; }
+input[type="text"],
+input[type="date"],
+input[type="number"],
+select {
+  width: 100%;
+  padding: 10px 13px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r);
+  font-size: 14px;
+  color: var(--text);
+  background: var(--white);
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+  font-family: inherit;
+  appearance: none;
+  -webkit-appearance: none;
+}
+input:focus, select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(200,169,110,0.15);
+}
+input::placeholder { color: var(--text3); }
+.form-row { margin-bottom: 14px; }
+.form-row:last-child { margin-bottom: 0; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+.grid4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; }
+
+/* ── 영수증 항목 ── */
+.receipt-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 14px; }
+.receipt-item {
+  border: 1.5px solid var(--border);
+  border-radius: var(--r2);
+  padding: 18px 20px;
+  background: var(--cream);
+  position: relative;
+  transition: border-color .15s;
+}
+.receipt-item:hover { border-color: var(--border2); }
+.receipt-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.receipt-num-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--navy);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 20px;
+  letter-spacing: 0.3px;
+}
+.receipt-remove {
+  background: none;
+  border: 1.5px solid var(--border2);
+  cursor: pointer;
+  color: var(--text3);
+  font-size: 16px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .15s;
+  line-height: 1;
+}
+.receipt-remove:hover { border-color: var(--danger); color: var(--danger); background: var(--danger-bg); }
+
+/* ── 사진 업로드 ── */
+.photo-upload {
+  border: 1.5px dashed var(--border2);
+  border-radius: var(--r);
+  padding: 14px 12px;
+  text-align: center;
+  cursor: pointer;
+  background: var(--white);
+  transition: all .15s;
+}
+.photo-upload:hover { border-color: var(--accent); background: rgba(200,169,110,0.05); }
+.pu-icon { font-size: 22px; margin-bottom: 4px; }
+.pu-text { font-size: 12px; color: var(--text2); font-weight: 500; }
+.photo-thumb {
+  width: 100%;
+  max-height: 100px;
+  object-fit: cover;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  display: none;
+  margin-top: 8px;
+}
+
+/* ── 버튼 ── */
+.btn-add {
+  width: 100%;
+  padding: 12px;
+  border: 1.5px dashed var(--border2);
+  border-radius: var(--r);
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text2);
+  cursor: pointer;
+  transition: all .15s;
+  font-family: inherit;
+  letter-spacing: 0.2px;
+}
+.btn-add:hover { border-color: var(--accent); color: var(--accent); background: rgba(200,169,110,0.05); }
+
+.btn-primary {
+  width: 100%;
+  padding: 14px;
+  background: var(--navy);
+  color: #fff;
+  border: none;
+  border-radius: var(--r);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .2s;
+  margin-top: 6px;
+  font-family: inherit;
+  letter-spacing: -0.2px;
+  position: relative;
+  overflow: hidden;
+}
+.btn-primary::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(200,169,110,0.15) 0%, transparent 60%);
+}
+.btn-primary:hover { background: var(--navy2); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(26,35,50,0.25); }
+.btn-primary:active { transform: translateY(0); }
+.btn-primary:disabled { opacity: .45; cursor: not-allowed; transform: none; box-shadow: none; }
+
+.btn-small {
+  padding: 8px 16px;
+  border-radius: var(--r);
+  border: 1.5px solid var(--border2);
+  background: var(--white);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  color: var(--text);
+  font-family: inherit;
+  transition: all .15s;
+}
+.btn-small:hover { border-color: var(--navy); background: var(--navy); color: #fff; }
+
+.btn-accent {
+  padding: 8px 16px;
+  border-radius: var(--r);
+  border: none;
+  background: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--navy);
+  font-family: inherit;
+  transition: all .15s;
+}
+.btn-accent:hover { background: var(--accent2); }
+
+/* ── 상태 메시지 ── */
+.status-success {
+  background: var(--success-bg);
+  color: var(--success);
+  padding: 14px 18px;
+  border-radius: var(--r);
+  font-size: 14px;
+  font-weight: 500;
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(26,122,62,0.2);
+}
+
+/* ── 결과 박스 ── */
+.result-box {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  padding: 22px 26px;
+  margin-top: 16px;
+  box-shadow: 0 1px 3px rgba(26,35,50,0.06);
+}
+.result-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+.result-avatar {
+  width: 38px;
+  height: 38px;
+  background: var(--navy);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.result-name { font-size: 15px; font-weight: 700; }
+.result-dept { font-size: 12px; color: var(--text2); margin-top: 1px; }
+.result-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--cream2);
+  font-size: 14px;
+}
+.result-row:last-child { border-bottom: none; font-weight: 700; font-size: 15px; padding-top: 14px; }
+.result-date { color: var(--text3); font-size: 12px; min-width: 88px; font-weight: 500; }
+.result-store { flex: 1; font-weight: 500; }
+.result-memo { color: var(--text3); font-size: 12px; margin-left: 4px; }
+.result-amt { font-weight: 600; min-width: 90px; text-align: right; color: var(--navy); }
+
+/* ── 뱃지 ── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  letter-spacing: 0.2px;
+}
+.badge.교통비 { background: #fff3e0; color: #b06020; }
+.badge.소모품 { background: #e8f5e9; color: #2e7d32; }
+.badge.배송비 { background: #ede7f6; color: #512da8; }
+.badge.기타   { background: #f5f5f5; color: #555; }
+
+/* ── 관리자 요약 ── */
+.summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+.stat-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  padding: 18px 20px;
+  box-shadow: 0 1px 3px rgba(26,35,50,0.06);
+  position: relative;
+  overflow: hidden;
+}
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--accent);
+  opacity: 0.6;
+}
+.stat-card .lbl { font-size: 11px; font-weight: 700; color: var(--text3); letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 8px; }
+.stat-card .val { font-size: 22px; font-weight: 700; color: var(--navy); }
+
+/* ── 월별 탭 ── */
+.admin-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+.month-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.month-btn {
+  padding: 7px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1.5px solid var(--border2);
+  background: var(--white);
+  color: var(--text2);
+  font-family: inherit;
+  transition: all .15s;
+}
+.month-btn:hover { border-color: var(--navy); color: var(--navy); }
+.month-btn.active { background: var(--navy); color: var(--accent); border-color: var(--navy); }
+
+/* ── 테이블 ── */
+.table-wrap { overflow-x: auto; border-radius: var(--r2); border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(26,35,50,0.06); }
+table { width: 100%; border-collapse: collapse; font-size: 13px; background: var(--white); }
+thead { background: var(--navy); }
+th {
+  text-align: left;
+  padding: 12px 14px;
+  color: rgba(255,255,255,0.6);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+td { padding: 11px 14px; border-bottom: 1px solid var(--cream2); color: var(--text); white-space: nowrap; vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: rgba(200,169,110,0.06); }
+.empty-state { text-align: center; padding: 56px 20px; color: var(--text3); font-size: 14px; }
+.empty-state .empty-icon { font-size: 36px; margin-bottom: 10px; opacity: 0.5; }
+
+/* ── 썸네일 ── */
+.thumb {
+  width: 36px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  transition: all .15s;
+  display: block;
+}
+.thumb:hover { transform: scale(1.12); border-color: var(--accent); box-shadow: 0 2px 8px rgba(200,169,110,0.4); }
+.no-img {
+  width: 36px;
+  height: 48px;
+  background: var(--cream2);
+  border-radius: 6px;
+  border: 1.5px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  opacity: 0.5;
+}
+
+/* ── 모달 ── */
+.modal-bg {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(10,15,25,0.75);
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  backdrop-filter: blur(4px);
+}
+.modal-bg.open { display: flex; }
+.modal-box {
+  background: var(--white);
+  border-radius: 18px;
+  padding: 28px;
+  max-width: 460px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 24px 64px rgba(10,15,25,0.35);
+  animation: modalIn .2s ease;
+}
+@keyframes modalIn { from { opacity:0; transform: scale(.95) translateY(8px); } to { opacity:1; transform: none; } }
+.modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border2);
+  background: var(--cream);
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text2);
+  transition: all .15s;
+}
+.modal-close:hover { background: var(--navy); color: #fff; border-color: var(--navy); }
+.modal-title { font-size: 16px; font-weight: 700; padding-right: 40px; margin-bottom: 4px; }
+.modal-sub { font-size: 12px; color: var(--text3); }
+.modal-img { width: 100%; border-radius: 10px; border: 1px solid var(--border); margin-top: 16px; }
+.modal-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+.meta-item { background: var(--cream); border-radius: var(--r); padding: 12px 14px; border: 1px solid var(--border); }
+.meta-item .mk { font-size: 10px; font-weight: 700; color: var(--text3); letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 5px; }
+.meta-item .mv { font-size: 14px; font-weight: 600; color: var(--navy); }
+
+/* ── 반응형 ── */
+@media (max-width: 640px) {
+  .grid3, .grid4 { grid-template-columns: 1fr 1fr; }
+  .summary-grid { grid-template-columns: 1fr 1fr; }
+  .container { padding: 0 16px 40px; margin-top: 20px; }
+  .header { padding: 0 18px; }
+  .tab-bar { padding: 0 18px; }
+  .tab { padding: 12px 14px; font-size: 12px; }
+}
+
+/* ── 페이지 진입 애니메이션 ── */
+.page.active .card,
+.page.active .summary-grid,
+.page.active .admin-toolbar,
+.page.active .table-wrap {
+  animation: fadeUp .3s ease both;
+}
+.page.active .card:nth-child(2) { animation-delay: .05s; }
+.page.active .card:nth-child(3) { animation-delay: .1s; }
+@keyframes fadeUp { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: none; } }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="header-logo">🧾</div>
+    <div>
+      <div class="header-title">경비 청구 시스템</div>
+      <div class="header-sub">영수증 제출 · 관리 · 엑셀 출력</div>
+    </div>
+  </div>
+</div>
+
+<div class="tab-bar">
+  <div class="tab active" onclick="switchTab('employee')">직원용 — 영수증 제출</div>
+  <div class="tab" onclick="switchTab('admin')">회계담당자 — 관리자</div>
+</div>
+
+<div class="container">
+
+  <!-- ── 직원 페이지 ── -->
+  <div class="page active" id="page-employee">
+
+    <div class="section-label">직원 정보</div>
+    <div class="card">
+      <div class="grid3">
+        <div class="form-row"><label>이름</label><input type="text" id="emp-name" placeholder="홍길동"></div>
+        <div class="form-row"><label>부서</label><input type="text" id="emp-dept" placeholder="영업팀"></div>
+        <div class="form-row"><label>직급</label><input type="text" id="emp-rank" placeholder="대리"></div>
+      </div>
+    </div>
+
+    <div class="section-label">영수증 내역</div>
+    <div class="card">
+      <div class="receipt-list" id="receipt-list"></div>
+      <button class="btn-add" onclick="addItem()">＋ 영수증 항목 추가</button>
+    </div>
+
+    <button class="btn-primary" onclick="submit()">제출하기 →</button>
+    <div id="submit-status"></div>
+    <div id="result-area"></div>
+
+  </div>
+
+  <!-- ── 관리자 페이지 ── -->
+  <div class="page" id="page-admin">
+
+    <div class="summary-grid">
+      <div class="stat-card"><div class="lbl">조회 월 건수</div><div class="val" id="stat-count">—</div></div>
+      <div class="stat-card"><div class="lbl">조회 월 금액</div><div class="val" id="stat-total">—</div></div>
+      <div class="stat-card"><div class="lbl">직원 수</div><div class="val" id="stat-emp">—</div></div>
+      <div class="stat-card"><div class="lbl">누적 총액</div><div class="val" id="stat-all">—</div></div>
+    </div>
+
+    <div class="admin-toolbar">
+      <div class="month-tabs" id="month-tabs"></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-small" onclick="clearAll()">초기화</button>
+        <button class="btn-accent" onclick="exportExcel()">↓ 엑셀 다운로드</button>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>영수증</th><th>제출일</th><th>이름</th><th>부서</th><th>직급</th>
+          <th>사용일</th><th>금액</th><th>분류</th><th>사용처</th><th>메모</th>
+        </tr></thead>
+        <tbody id="admin-tbody"></tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── 모달 ── -->
+<div class="modal-bg" id="modal" onclick="closeBg(event)">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal()">×</button>
+    <div class="modal-title" id="modal-title"></div>
+    <div class="modal-sub" id="modal-sub"></div>
+    <img class="modal-img" id="modal-img" src="" alt="영수증" style="display:none">
+    <div class="modal-meta" id="modal-meta"></div>
+  </div>
+</div>
+
+<script>
+let subs = [], imgs = {}, selMonth = 'all', counter = 0, itemImgs = {};
+const CATS = ['교통비','소모품','배송비','기타'];
+
+try { subs = JSON.parse(localStorage.getItem('exp_subs')||'[]'); } catch(e){}
+try { imgs = JSON.parse(localStorage.getItem('exp_imgs')||'{}'); } catch(e){}
+
+// ── 탭 ────────────────────────────────────────────
+function switchTab(t) {
+  document.querySelectorAll('.tab').forEach((el,i) =>
+    el.classList.toggle('active',(t==='employee'&&i===0)||(t==='admin'&&i===1)));
+  document.getElementById('page-employee').classList.toggle('active', t==='employee');
+  document.getElementById('page-admin').classList.toggle('active', t==='admin');
+  if (t==='admin') renderAdmin();
+}
+
+// ── 항목 추가 ─────────────────────────────────────
+function addItem() {
+  counter++;
+  const id = counter;
+  const today = new Date().toISOString().split('T')[0];
+  const cats = CATS.map(c=>`<option>${c}</option>`).join('');
+  const div = document.createElement('div');
+  div.className = 'receipt-item'; div.id = 'ri-'+id;
+  div.innerHTML = `
+    <div class="receipt-item-header">
+      <span class="receipt-num-badge">🧾 영수증 ${id}</span>
+      <button class="receipt-remove" onclick="removeItem(${id})" title="삭제">×</button>
+    </div>
+    <div class="grid4" style="margin-bottom:12px">
+      <div class="form-row" style="margin-bottom:0"><label>사용일</label><input type="date" id="d-${id}" value="${today}"></div>
+      <div class="form-row" style="margin-bottom:0"><label>금액 (원)</label><input type="number" id="a-${id}" placeholder="12,000" min="0"></div>
+      <div class="form-row" style="margin-bottom:0"><label>분류</label><select id="c-${id}">${cats}</select></div>
+      <div class="form-row" style="margin-bottom:0"><label>사용처</label><input type="text" id="s-${id}" placeholder="카카오T"></div>
+    </div>
+    <div class="grid2">
+      <div class="form-row" style="margin-bottom:0"><label>메모 (선택)</label><input type="text" id="m-${id}" placeholder="간단한 설명"></div>
+      <div>
+        <label>영수증 사진 (선택)</label>
+        <div class="photo-upload" onclick="document.getElementById('p-${id}').click()">
+          <div class="pu-icon">📎</div>
+          <div class="pu-text" id="pt-${id}">사진 첨부</div>
+          <img class="photo-thumb" id="th-${id}">
+        </div>
+        <input type="file" accept="image/*" id="p-${id}" style="display:none" onchange="onPhoto(${id},this)">
+      </div>
+    </div>`;
+  document.getElementById('receipt-list').appendChild(div);
+  div.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function removeItem(id) {
+  const el = document.getElementById('ri-'+id);
+  if (el) el.remove();
+  delete itemImgs[id];
+}
+
+function onPhoto(id, input) {
+  const f = input.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = e => {
+    itemImgs[id] = e.target.result;
+    const th = document.getElementById('th-'+id);
+    th.src = e.target.result; th.style.display = 'block';
+    document.getElementById('pt-'+id).textContent = '✓ ' + f.name;
+  };
+  r.readAsDataURL(f);
+}
+
+// ── 제출 ─────────────────────────────────────────
+function submit() {
+  const name = document.getElementById('emp-name').value.trim();
+  const dept = document.getElementById('emp-dept').value.trim();
+  const rank = document.getElementById('emp-rank').value.trim();
+  if (!name||!dept||!rank) { alert('이름, 부서, 직급을 입력해주세요.'); return; }
+
+  const items = []; let err = false;
+  document.querySelectorAll('.receipt-item').forEach(el => {
+    const id = el.id.replace('ri-','');
+    const date   = document.getElementById('d-'+id)?.value;
+    const amount = document.getElementById('a-'+id)?.value;
+    const cat    = document.getElementById('c-'+id)?.value;
+    const store  = document.getElementById('s-'+id)?.value.trim();
+    const memo   = document.getElementById('m-'+id)?.value.trim();
+    if (!date||!amount||!store) { err = true; return; }
+    const imgId = itemImgs[id] ? 'img_'+Date.now()+'_'+id : '';
+    if (imgId) try { imgs[imgId] = itemImgs[id]; } catch(e) {}
+    items.push({ date, amount: Number(amount), category: cat, store, memo, imgId });
+  });
+
+  if (err) { alert('모든 항목의 사용일, 금액, 사용처를 입력해주세요.'); return; }
+  if (!items.length) { alert('영수증을 1건 이상 추가해주세요.'); return; }
+
+  const now = new Date();
+  const submittedAt = now.toLocaleDateString('ko-KR');
+  const yearMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  subs.push({ submittedAt, yearMonth, name, dept, rank, items });
+  try { localStorage.setItem('exp_subs', JSON.stringify(subs)); } catch(e){}
+  try { localStorage.setItem('exp_imgs', JSON.stringify(imgs)); } catch(e){}
+
+  const initials = name.slice(0,1);
+  const total = items.reduce((s,r) => s+r.amount, 0);
+
+  document.getElementById('submit-status').innerHTML =
+    '<div class="status-success">✓ 제출 완료! 회계팀에 전달됐습니다.</div>';
+
+  document.getElementById('result-area').innerHTML = `
+    <div class="result-box">
+      <div class="result-header">
+        <div class="result-avatar">${initials}</div>
+        <div>
+          <div class="result-name">${name}</div>
+          <div class="result-dept">${dept} · ${rank} · ${submittedAt} 제출</div>
+        </div>
+      </div>
+      ${items.map(r=>`
+        <div class="result-row">
+          <span class="result-date">${r.date}</span>
+          <span class="result-store">${r.store}${r.memo?`<span class="result-memo">${r.memo}</span>`:''}</span>
+          <span class="badge ${r.category}">${r.category}</span>
+          <span class="result-amt">${r.amount.toLocaleString()}원</span>
+        </div>`).join('')}
+      <div class="result-row">
+        <span style="flex:1;color:var(--text2);font-size:13px">총 ${items.length}건</span>
+        <span class="result-amt" style="font-size:18px">${total.toLocaleString()}원</span>
+      </div>
+    </div>`;
+
+  document.getElementById('receipt-list').innerHTML = '';
+  ['emp-name','emp-dept','emp-rank'].forEach(i => document.getElementById(i).value='');
+  itemImgs = {}; counter = 0;
+  addItem();
+}
+
+// ── 관리자 렌더 ───────────────────────────────────
+function getMonths() {
+  const s = new Set();
+  subs.forEach(x => x.yearMonth && s.add(x.yearMonth));
+  return [...s].sort().reverse();
+}
+
+function renderAdmin() {
+  const months = getMonths();
+  document.getElementById('month-tabs').innerHTML =
+    `<button class="month-btn ${selMonth==='all'?'active':''}" onclick="selMon('all')">전체</button>` +
+    months.map(m =>
+      `<button class="month-btn ${selMonth===m?'active':''}" onclick="selMon('${m}')">${m.replace('-','년 ')}월</button>`
+    ).join('');
+
+  const list = selMonth==='all' ? subs : subs.filter(s=>s.yearMonth===selMonth);
+  const tbody = document.getElementById('admin-tbody');
+
+  if (!list.length) {
+    tbody.innerHTML = `<tr><td colspan="10">
+      <div class="empty-state">
+        <div class="empty-icon">🗂️</div>
+        아직 제출된 내역이 없습니다
+      </div>
+    </td></tr>`;
+    ['stat-count','stat-total','stat-emp'].forEach((id,i) =>
+      document.getElementById(id).textContent = ['0건','0원','0명'][i]);
+  } else {
+    let rows='', cnt=0, total=0;
+    const emps = new Set();
+    list.forEach(s => {
+      emps.add(s.name+'_'+s.dept);
+      s.items.forEach(it => {
+        cnt++; total += Number(it.amount);
+        const src = it.imgId ? (imgs[it.imgId]||'') : '';
+        const tHtml = src
+          ? `<img class="thumb" src="${src}" onclick="openModal('${it.imgId}','${s.name}','${s.dept} · ${s.rank}','${it.date}','${it.store}',${it.amount},'${it.category}','${(it.memo||'').replace(/'/g,"\\'")}'">`
+          : `<div class="no-img">📄</div>`;
+        rows += `<tr>
+          <td>${tHtml}</td>
+          <td style="color:var(--text3);font-size:12px">${s.submittedAt}</td>
+          <td style="font-weight:600">${s.name}</td>
+          <td style="color:var(--text2)">${s.dept}</td>
+          <td style="color:var(--text2)">${s.rank}</td>
+          <td>${it.date}</td>
+          <td style="text-align:right;font-weight:600;color:var(--navy)">${Number(it.amount).toLocaleString()}원</td>
+          <td><span class="badge ${it.category}">${it.category}</span></td>
+          <td style="font-weight:500">${it.store}</td>
+          <td style="color:var(--text3)">${it.memo||'—'}</td>
+        </tr>`;
+      });
+    });
+    tbody.innerHTML = rows;
+    document.getElementById('stat-count').textContent = cnt+'건';
+    document.getElementById('stat-total').textContent = total.toLocaleString()+'원';
+    document.getElementById('stat-emp').textContent = emps.size+'명';
+  }
+
+  let all = 0;
+  subs.forEach(s => s.items.forEach(it => all += Number(it.amount)));
+  document.getElementById('stat-all').textContent = all.toLocaleString()+'원';
+}
+
+function selMon(m) { selMonth = m; renderAdmin(); }
+
+// ── 모달 ──────────────────────────────────────────
+function openModal(imgId, name, dept, date, store, amount, cat, memo) {
+  const src = imgs[imgId] || '';
+  document.getElementById('modal-title').textContent = store;
+  document.getElementById('modal-sub').textContent = `${name} · ${dept}`;
+  const img = document.getElementById('modal-img');
+  img.src = src; img.style.display = src ? 'block' : 'none';
+  document.getElementById('modal-meta').innerHTML = `
+    <div class="meta-item"><div class="mk">사용일</div><div class="mv">${date}</div></div>
+    <div class="meta-item"><div class="mk">금액</div><div class="mv">${Number(amount).toLocaleString()}원</div></div>
+    <div class="meta-item"><div class="mk">분류</div><div class="mv">${cat}</div></div>
+    <div class="meta-item"><div class="mk">메모</div><div class="mv">${memo||'—'}</div></div>`;
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+function closeBg(e) { if (e.target.id==='modal') closeModal(); }
+
+// ── 초기화 & 엑셀 ─────────────────────────────────
+function clearAll() {
+  if (!confirm('전체 내역을 삭제할까요? 되돌릴 수 없습니다.')) return;
+  subs=[]; imgs={}; selMonth='all';
+  try { localStorage.removeItem('exp_subs'); localStorage.removeItem('exp_imgs'); } catch(e){}
+  renderAdmin();
+}
+
+function exportExcel() {
+  const months = [...new Set(subs.map(s=>s.yearMonth))].sort();
+  const toExp = selMonth==='all' ? months : [selMonth];
+  if (!toExp.length) { alert('내역이 없습니다.'); return; }
+  const wb = XLSX.utils.book_new();
+  toExp.forEach(m => {
+    const list = subs.filter(s=>s.yearMonth===m);
+    if (!list.length) return;
+    const rows = [['제출일','이름','부서','직급','사용일','금액(원)','분류','사용처','메모']];
+    list.forEach(s => s.items.forEach(it =>
+      rows.push([s.submittedAt, s.name, s.dept, s.rank, it.date, Number(it.amount), it.category, it.store, it.memo||''])
+    ));
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{wch:12},{wch:10},{wch:10},{wch:8},{wch:12},{wch:14},{wch:10},{wch:18},{wch:22}];
+    XLSX.utils.book_append_sheet(wb, ws, m.replace('-','년')+'월');
+  });
+  XLSX.writeFile(wb, `경비청구_${selMonth==='all'?'전체':selMonth}.xlsx`);
+}
+
+// ── 초기 실행 ─────────────────────────────────────
+renderAdmin();
+addItem();
+</script>
+</body>
+</html>
